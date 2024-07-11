@@ -284,7 +284,7 @@ const InvoiceGenerator = () => {
       <ul>
         {currentInvoice.map((item, index) => (
           <li key={index}>
-            {item.name} - Quantity: {item.quantity} - Price: $
+            {item.name} - Quantity: {item.quantity} - Price: Rs.
             {item.price * item.quantity}
           </li>
         ))}
@@ -304,6 +304,7 @@ const InvoiceGenerator = () => {
 const ProductCreator = () => {
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productQuantity, setProductQuantity] = useState('');
   const { inventory, setInventory } = useContext(InventoryContext);
 
   const createProduct = () => {
@@ -311,7 +312,7 @@ const ProductCreator = () => {
       id: uuidv4(),
       name: productName,
       price: parseFloat(productPrice),
-      quantity: 0,
+      quantity: parseInt(productQuantity),
     };
     setInventory([...inventory, newProduct]);
     setProductName('');
@@ -319,23 +320,46 @@ const ProductCreator = () => {
   };
 
   return (
-    <div>
-      <h2>Create New Product</h2>
-      <Input
-        type='text'
-        value={productName}
-        onChange={(e) => setProductName(e.target.value)}
-        placeholder='Enter product name'
-      />
-      <Input
-        type='number'
-        value={productPrice}
-        onChange={(e) => setProductPrice(e.target.value)}
-        placeholder='Enter product price'
-        min='0'
-        step='0.01'
-      />
-      <Button onClick={createProduct}>Create Product</Button>
+    <div className='p-4 mx-auto bg-white shadow-lg rounded-lg'>
+      <h2 className='text-2xl font-bold mb-4'>Create New Product</h2>
+      <div className='mb-4'>
+        <Input
+          type='text'
+          value={productName}
+          onChange={(e) => setProductName(e.target.value)}
+          placeholder='Enter product name'
+          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+        />
+      </div>
+      <div className='mb-4'>
+        <Input
+          type='number'
+          value={productPrice}
+          onChange={(e) => setProductPrice(e.target.value)}
+          placeholder='Enter product price'
+          min='0'
+          step='0.01'
+          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+        />
+      </div>
+      <div className='mb-4'>
+        <Input
+          type='number'
+          value={productQuantity}
+          onChange={(e) => setProductQuantity(e.target.value)}
+          placeholder='Enter product quantity'
+          min='1'
+          step='1'
+          defaultValue='1'
+          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+        />
+      </div>
+      <Button
+        onClick={createProduct}
+        className='w-full bg-indigo-500 text-white py-2 px-4 rounded-md hover:bg-indigo-600 focus:outline-none focus:bg-indigo-700'
+      >
+        Create Product
+      </Button>
     </div>
   );
 };
@@ -352,9 +376,9 @@ const SalesAnalytics = () => {
   return (
     <div>
       <h2>Sales Analytics</h2>
-      <p>Total Sales: ${totalSales.toFixed(2)}</p>
+      <p>Total Sales: Rs.{totalSales.toFixed(2)}</p>
       <p>Number of Transactions: {salesHistory.length}</p>
-      <p>Average Sale: ${averageSale.toFixed(2)}</p>
+      <p>Average Sale: Rs.{averageSale.toFixed(2)}</p>
     </div>
   );
 };
@@ -362,23 +386,42 @@ const SalesAnalytics = () => {
 const App = () => {
   return (
     <InventoryProvider>
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-        <h1>Inventory Management System</h1>
+      {/* <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}> */}
+      <div className='max-w-xl mx-auto p-5 bg-white shadow-md rounded-lg'>
+        <h1 className='text-3xl font-bold text-center mb-6'>
+          Inventory Management System
+        </h1>
         <Tabs defaultValue='scan'>
-          <TabsList className='grid w-full grid-cols-5'>
-            <TabsTrigger value='scan'>
+          {/* <TabsList className='grid w-full grid-cols-5'> */}
+          <TabsList className='grid grid-cols-5 gap-2 mb-4'>
+            <TabsTrigger
+              value='scan'
+              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+            >
               <Camera size={20} />
             </TabsTrigger>
-            <TabsTrigger value='inventory'>
+            <TabsTrigger
+              value='inventory'
+              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+            >
               <List size={20} />
             </TabsTrigger>
-            <TabsTrigger value='invoice'>
+            <TabsTrigger
+              value='invoice'
+              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+            >
               <FileText size={20} />
             </TabsTrigger>
-            <TabsTrigger value='create'>
+            <TabsTrigger
+              value='create'
+              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+            >
               <PlusCircle size={20} />
             </TabsTrigger>
-            <TabsTrigger value='analytics'>
+            <TabsTrigger
+              value='analytics'
+              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+            >
               <BarChart2 size={20} />
             </TabsTrigger>
           </TabsList>
