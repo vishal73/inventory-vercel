@@ -4,15 +4,15 @@ import React, {
   useContext,
   createContext,
   useRef,
-} from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { v4 as uuidv4 } from 'uuid';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Table } from './components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Camera, List, FileText, PlusCircle, BarChart2 } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
+} from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { v4 as uuidv4 } from "uuid";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Table } from "./components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Camera, List, FileText, PlusCircle, BarChart2 } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 
 // Context for global state management
 const InventoryContext = createContext();
@@ -50,7 +50,7 @@ const InventoryProvider = ({ children }) => {
 };
 
 const ProductScanner = () => {
-  const [scannedData, setScannedData] = useState('No data scanned');
+  const [scannedData, setScannedData] = useState("No data scanned");
   const { inventory, setInventory } = useContext(InventoryContext);
 
   const handleScan = (data) => {
@@ -79,12 +79,12 @@ const ProductScanner = () => {
   const isScannerRunningRef = useRef(false);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode('qr-reader');
+    const scanner = new Html5Qrcode("qr-reader");
     const config = { fps: 10, qrbox: 250 };
 
     scanner
       .start(
-        { facingMode: 'environment' },
+        { facingMode: "environment" },
         config,
         (decodedText) => {
           handleScan(decodedText);
@@ -100,14 +100,14 @@ const ProductScanner = () => {
       })
       .catch((err) => {
         setError(err);
-        console.error('Unable to start scanning', err);
+        console.error("Unable to start scanning", err);
       });
 
     return () => {
       if (isScannerRunningRef.current) {
         scanner
           .stop()
-          .catch((err) => console.error('Unable to stop scanning', err));
+          .catch((err) => console.error("Unable to stop scanning", err));
       }
     };
   }, []);
@@ -115,7 +115,7 @@ const ProductScanner = () => {
   return (
     <>
       <h2>Scan Product</h2>
-      <div id='qr-reader' ref={scannerRef} style={{ width: '100%' }} />
+      <div id="qr-reader" ref={scannerRef} style={{ width: "100%" }} />
       <p>Scanned Data: {scannedData}</p>
       {/* {error && <p style={{ color: 'red' }}>{error}</p>} */}
     </>
@@ -149,12 +149,12 @@ const ProductList = () => {
               <td>{product.name}</td>
               <td>
                 <Input
-                  type='number'
+                  type="number"
                   value={product.quantity}
                   onChange={(e) =>
                     handleQuantityChange(product.id, e.target.value)
                   }
-                  min='0'
+                  min="0"
                 />
               </td>
               <td>
@@ -177,7 +177,7 @@ const InvoiceGenerator = () => {
     setSalesHistory,
     setInventory,
   } = useContext(InventoryContext);
-  const [scannedProduct, setScannedProduct] = useState('');
+  const [scannedProduct, setScannedProduct] = useState("");
 
   const handleScan = (data) => {
     if (data) {
@@ -203,12 +203,12 @@ const InvoiceGenerator = () => {
   const isScannerRunningRef = useRef(false);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode('qr-reader');
+    const scanner = new Html5Qrcode("qr-reader");
     const config = { fps: 10, qrbox: 250 };
 
     scanner
       .start(
-        { facingMode: 'environment' },
+        { facingMode: "environment" },
         config,
         (decodedText) => {
           handleScan(decodedText);
@@ -224,14 +224,14 @@ const InvoiceGenerator = () => {
       })
       .catch((err) => {
         setError(err);
-        console.error('Unable to start scanning', err);
+        console.error("Unable to start scanning", err);
       });
 
     return () => {
       if (isScannerRunningRef.current) {
         scanner
           .stop()
-          .catch((err) => console.error('Unable to stop scanning', err));
+          .catch((err) => console.error("Unable to stop scanning", err));
       }
     };
   }, []);
@@ -266,7 +266,7 @@ const InvoiceGenerator = () => {
   return (
     <div>
       <h2>Generate Invoice</h2>
-      <div id='qr-reader' ref={scannerRef} style={{ width: '100%' }} />
+      <div id="qr-reader" ref={scannerRef} style={{ width: "100%" }} />
       {/* <QrReader
         delay={300}
         onResult={(result, error) => {
@@ -290,7 +290,7 @@ const InvoiceGenerator = () => {
         ))}
       </ul>
       <p>
-        Total: $
+        Total: Rs.
         {currentInvoice.reduce(
           (total, item) => total + item.price * item.quantity,
           0
@@ -302,9 +302,9 @@ const InvoiceGenerator = () => {
 };
 
 const ProductCreator = () => {
-  const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productQuantity, setProductQuantity] = useState('');
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productQuantity, setProductQuantity] = useState("");
   const { inventory, setInventory } = useContext(InventoryContext);
 
   const createProduct = () => {
@@ -315,48 +315,48 @@ const ProductCreator = () => {
       quantity: parseInt(productQuantity),
     };
     setInventory([...inventory, newProduct]);
-    setProductName('');
-    setProductPrice('');
+    setProductName("");
+    setProductPrice("");
   };
 
   return (
-    <div className='p-4 mx-auto bg-white shadow-lg rounded-lg'>
-      <h2 className='text-2xl font-bold mb-4'>Create New Product</h2>
-      <div className='mb-4'>
+    <div className="p-4 mx-auto bg-white shadow-lg rounded-lg">
+      <h2 className="text-2xl font-bold mb-4">Create New Product</h2>
+      <div className="mb-4">
         <Input
-          type='text'
+          type="text"
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
-          placeholder='Enter product name'
-          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+          placeholder="Enter product name"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
         />
       </div>
-      <div className='mb-4'>
+      <div className="mb-4">
         <Input
-          type='number'
+          type="number"
           value={productPrice}
           onChange={(e) => setProductPrice(e.target.value)}
-          placeholder='Enter product price'
-          min='0'
-          step='0.01'
-          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+          placeholder="Enter product price"
+          min="0"
+          step="0.01"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
         />
       </div>
-      <div className='mb-4'>
+      <div className="mb-4">
         <Input
-          type='number'
+          type="number"
           value={productQuantity}
           onChange={(e) => setProductQuantity(e.target.value)}
-          placeholder='Enter product quantity'
-          min='1'
-          step='1'
-          defaultValue='1'
-          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200'
+          placeholder="Enter product quantity"
+          min="1"
+          step="1"
+          defaultValue="1"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
         />
       </div>
       <Button
         onClick={createProduct}
-        className='w-full bg-indigo-500 text-white py-2 px-4 rounded-md hover:bg-indigo-600 focus:outline-none focus:bg-indigo-700'
+        className="w-full bg-indigo-500 text-white py-2 px-4 rounded-md hover:bg-indigo-600 focus:outline-none focus:bg-indigo-700"
       >
         Create Product
       </Button>
@@ -387,57 +387,57 @@ const App = () => {
   return (
     <InventoryProvider>
       {/* <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}> */}
-      <div className='max-w-xl mx-auto p-5 bg-white shadow-md rounded-lg'>
-        <h1 className='text-3xl font-bold text-center mb-6'>
+      <div className="max-w-xl mx-auto p-5 bg-white shadow-md rounded-lg">
+        <h1 className="text-3xl font-bold text-center mb-6">
           Inventory Management System
         </h1>
-        <Tabs defaultValue='scan'>
+        <Tabs defaultValue="scan">
           {/* <TabsList className='grid w-full grid-cols-5'> */}
-          <TabsList className='grid grid-cols-5 gap-2 mb-4'>
+          <TabsList className="grid grid-cols-5 gap-2 mb-4">
             <TabsTrigger
-              value='scan'
-              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+              value="scan"
+              className="flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300"
             >
               <Camera size={20} />
             </TabsTrigger>
             <TabsTrigger
-              value='inventory'
-              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+              value="inventory"
+              className="flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300"
             >
               <List size={20} />
             </TabsTrigger>
             <TabsTrigger
-              value='invoice'
-              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+              value="invoice"
+              className="flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300"
             >
               <FileText size={20} />
             </TabsTrigger>
             <TabsTrigger
-              value='create'
-              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+              value="create"
+              className="flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300"
             >
               <PlusCircle size={20} />
             </TabsTrigger>
             <TabsTrigger
-              value='analytics'
-              className='flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300'
+              value="analytics"
+              className="flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 focus:bg-gray-300"
             >
               <BarChart2 size={20} />
             </TabsTrigger>
           </TabsList>
-          <TabsContent value='scan'>
+          <TabsContent value="scan">
             <ProductScanner />
           </TabsContent>
-          <TabsContent value='inventory'>
+          <TabsContent value="inventory">
             <ProductList />
           </TabsContent>
-          <TabsContent value='invoice'>
+          <TabsContent value="invoice">
             <InvoiceGenerator />
           </TabsContent>
-          <TabsContent value='create'>
+          <TabsContent value="create">
             <ProductCreator />
           </TabsContent>
-          <TabsContent value='analytics'>
+          <TabsContent value="analytics">
             <SalesAnalytics />
           </TabsContent>
         </Tabs>
