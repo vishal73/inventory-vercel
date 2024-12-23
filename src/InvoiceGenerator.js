@@ -5,7 +5,7 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Html5Qrcode } from "html5-qrcode";
 import { useTheme } from "./ThemeContext";
-import { saveInvoiceToDatabase, printInvoice } from "./Invoice";
+import { saveInvoiceToDatabase, printInvoice } from "./InvoiceUtils";
 import { PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "./components/ui/alert";
 import Logger from "./Logger";

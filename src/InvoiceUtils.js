@@ -1,3 +1,4 @@
+import { skaiLogo } from "./assets/skaiLogo";
 import Logger from "./Logger";
 const { addInvoice, updateInvoice, getInvoice } = require("./database");
 
@@ -109,3 +110,19 @@ export async function voidInvoice(invoiceId, reason, userId = "system") {
     throw error;
   }
 }
+
+export const generateInvoiceHTML = (invoice, buyerDetails) => {
+  return `
+    <div class="invoice-container">
+      <div class="header">
+        <img src="${skaiLogo}" alt="SKAI Accessories" style="height: 60px;" />
+        <div class="company-details">
+          <h1>SKAI Accessories</h1>
+          <p>Invoice #: ${invoice.id}</p>
+          <p>Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+      </div>
+      <!-- Rest of invoice template -->
+    </div>
+  `;
+};

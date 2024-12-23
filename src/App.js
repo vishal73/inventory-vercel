@@ -17,6 +17,7 @@ import ProductCreator from "./ProductCreator";
 import SalesAnalytics from "./SalesAnalytics";
 import { useTheme } from "./ThemeContext";
 import Logger from "./Logger";
+import { skaiLogo } from "./assets/skaiLogo";
 
 const logger = Logger;
 
@@ -40,19 +41,16 @@ const App = () => {
           isDarkMode ? "bg-gray-800 text-white" : "bg-white"
         } shadow-md rounded-lg`}
       >
-        <button
-          onClick={() => {
-            logger.debug("Theme toggle clicked");
-            toggleTheme();
-          }}
-          className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-          aria-label="Toggle theme"
-        >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-        <h1 className="text-3xl font-bold text-center mb-6">
-          Inventory Management System
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <img src={skaiLogo} alt="SKAI Accessories" className="h-12 w-auto" />
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+            aria-label="Toggle theme"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
         <Tabs defaultValue="inventory" onValueChange={handleTabChange}>
           <TabsList className="grid grid-cols-4 gap-2 mb-4">
             {[
