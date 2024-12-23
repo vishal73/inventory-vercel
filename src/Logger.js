@@ -20,7 +20,7 @@ const Logger = {
   },
 
   debug: (message) => {
-    if (process.env.DEBUG === "true") {
+    if (process.env.REACT_APP_DEBUG === "true") {
       console.debug(`[DEBUG] ${new Date().toISOString()}: ${message}`);
       Logger._storeLog("debug", message);
     }

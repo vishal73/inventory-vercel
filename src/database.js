@@ -2,12 +2,12 @@
 const CosmosClient = require("@azure/cosmos").CosmosClient;
 
 // const logger = require("./Logger");
-const endpoint = process.env.COSMOS_ENDPOINT;
-const key = process.env.COSMOS_KEY;
-const databaseId = process.env.COSMOS_DATABASE;
-const containerId = process.env.COSMOS_CONTAINER;
-const backupDatabaseId = process.env.COSMOS_BACKUP_DATABASE;
-const backupContainerId = process.env.COSMOS_BACKUP_CONTAINER;
+const endpoint = process.env.REACT_APP_COSMOS_ENDPOINT;
+const key = process.env.REACT_APP_COSMOS_KEY;
+const databaseId = process.env.REACT_APP_COSMOS_DATABASE;
+const containerId = process.env.REACT_APP_COSMOS_CONTAINER;
+const backupDatabaseId = process.env.REACT_APP_COSMOS_BACKUP_DATABASE;
+const backupContainerId = process.env.REACT_APP_COSMOS_BACKUP_CONTAINER;
 
 const client = new CosmosClient({
   endpoint,
