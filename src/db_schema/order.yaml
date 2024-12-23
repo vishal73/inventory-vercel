@@ -1,0 +1,27 @@
+order:
+  id: string
+  partitionKey: string
+  sellerId: string
+  buyerId: string
+  buyerName: string
+  buyerEmail: string
+  buyerPhone: string
+  products:
+    - productId: string
+      quantity: number
+      price: number
+      discount: number
+      totalPrice: number
+  gst: number
+  totalAmount: number
+  totalQuantity: number
+  paymentStatus: string # pending, completed, failed
+  paymentMethod: string # cash, card, upi, etc.
+  orderStatus: string # processing, shipped, delivered, canceled
+  createdAt: date
+  updatedAt: date
+  createdBy: string
+  updatedBy: string
+  deleted: boolean
+  deletedAt: date
+  deletedBy: string

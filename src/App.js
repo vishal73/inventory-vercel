@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {
   Camera,
@@ -10,15 +10,28 @@ import {
   Moon,
 } from "lucide-react";
 import { InventoryProvider } from "./InventoryContext";
-import ProductScanner from "./ProductScanner";
+// import ProductScanner from "./ProductScanner";
 import ProductList from "./ProductList";
 import InvoiceGenerator from "./InvoiceGenerator";
 import ProductCreator from "./ProductCreator";
 import SalesAnalytics from "./SalesAnalytics";
 import { useTheme } from "./ThemeContext";
+import Logger from "./Logger";
+
+const logger = Logger;
 
 const App = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState("invoice");
+
+  useEffect(() => {
+    logger.debug(`Theme mode changed: ${isDarkMode ? "dark" : "light"}`);
+  }, [isDarkMode]);
+
+  const handleTabChange = (value) => {
+    logger.debug(`Tab changed to: ${value}`);
+    setActiveTab(value);
+  };
 
   return (
     <InventoryProvider>
@@ -28,7 +41,10 @@ const App = () => {
         } shadow-md rounded-lg`}
       >
         <button
-          onClick={toggleTheme}
+          onClick={() => {
+            logger.debug("Theme toggle clicked");
+            toggleTheme();
+          }}
           className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
           aria-label="Toggle theme"
         >
@@ -37,7 +53,7 @@ const App = () => {
         <h1 className="text-3xl font-bold text-center mb-6">
           Inventory Management System
         </h1>
-        <Tabs defaultValue="invoice">
+        <Tabs defaultValue="inventory" onValueChange={handleTabChange}>
           <TabsList className="grid grid-cols-4 gap-2 mb-4">
             {[
               // { value: "scan", icon: Camera },
@@ -66,7 +82,7 @@ const App = () => {
             <ProductList />
           </TabsContent>
           <TabsContent value="invoice">
-            <InvoiceGenerator />
+            <InvoiceGenerator isActive={activeTab === "invoice"} />
           </TabsContent>
           <TabsContent value="create">
             <ProductCreator />

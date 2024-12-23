@@ -5,18 +5,23 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { ThemeProvider } from "./ThemeContext";
 import { InventoryProvider } from "./InventoryContext";
+import { BrowserRouter } from "react-router-dom";
+import { Buffer } from "buffer";
+window.Buffer = Buffer;
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
   <React.StrictMode>
-    <ThemeProvider>
-      <InventoryProvider>
-        <div className="min-h-screen transition-colors duration-300">
-          <App />
-        </div>
-      </InventoryProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <InventoryProvider>
+          <div className="min-h-screen transition-colors duration-300">
+            <App />
+          </div>
+        </InventoryProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
 

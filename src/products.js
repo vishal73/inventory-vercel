@@ -1,61 +1,47 @@
-import { MongoClient } from "mongodb";
+import {
+  addProduct,
+  getProducts,
+  updateProduct,
+  deleteProduct,
+} from "./database";
+import Logger from "./Logger";
 
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.DB_NAME;
-
-let cachedClient = null;
-let cachedDb = null;
-
-async function connectToDatabase() {
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
-  }
-
-  const client = await MongoClient.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const db = await client.db(dbName);
-
-  cachedClient = client;
-  cachedDb = db;
-
-  return { client, db };
-}
-
+const logger = Logger;
 export default async function handler(req, res) {
   const { method } = req;
 
   try {
-    const { db } = await connectToDatabase();
-    const collection = db.collection("products");
-
     switch (method) {
       case "GET":
-        const products = await collection.find({}).toArray();
+        logger.info("Retrieving all products");
+        const products = await getProducts();
         res.status(200).json(products);
         break;
+
       case "POST":
-        const newProduct = req.body;
-        const result = await collection.insertOne(newProduct);
-        res.status(201).json(result.ops[0]);
+        logger.info(`Creating new product: ${JSON.stringify(req.body)}`);
+        const newProduct = await addProduct(req.body);
+        res.status(201).json(newProduct);
         break;
+
       case "PUT":
         const { id, ...updates } = req.body;
-        await collection.updateOne({ _id: id }, { $set: updates });
-        res.status(200).json({ message: "Product updated successfully" });
+        const updatedProduct = await updateProduct(id, updates);
+        res.status(200).json(updatedProduct);
         break;
+
       case "DELETE":
         const { id: deleteId } = req.query;
-        await collection.deleteOne({ _id: deleteId });
+        await deleteProduct(deleteId);
         res.status(200).json({ message: "Product deleted successfully" });
         break;
+
       default:
         res.setHeader("Allow", ["GET", "POST", "PUT", "DELETE"]);
         res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
+    logger.error(`Error in products handler: ${error.message}`);
     res
       .status(500)
       .json({ message: "Error processing request", error: error.message });

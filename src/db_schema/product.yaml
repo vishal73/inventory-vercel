@@ -1,0 +1,31 @@
+product:
+  id: string
+  partitionKey: string
+  name: string
+  description: string
+  images:
+    - string # URLs
+  codeType: string # qrcode, barcode, etc
+  code: string # code value
+  category: string # earrings, bracelets, necklaces, rings, chains, sets, etc
+  type: string # oxidized, plated, metallic, etc
+  variant:
+    name: string # variant name
+    description: string # description of the variant
+    color: string # gold, silver, rose gold, etc
+    size: string # 10k, 14k, 18k, etc
+    weight: number # in grams
+    material: string # gold, silver, rose gold, etc
+    quantity: number # in pcs
+    price: number # in rupees
+    discount: number # in percentage
+  tags:
+    - string # officewear, casualwear, etc
+  sellerId: string
+  createdAt: date
+  updatedAt: date
+  createdBy: string
+  updatedBy: string
+  deleted: boolean
+  deletedAt: date
+  deletedBy: string

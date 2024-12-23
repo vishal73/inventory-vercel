@@ -4,7 +4,12 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
-} from "./mongodb";
+  addOrder,
+  getOrders,
+} from "./database";
+import Logger from "./Logger";
+
+const logger = Logger;
 
 const InventoryContext = createContext();
 
@@ -20,34 +25,86 @@ export const InventoryProvider = ({ children }) => {
   const [inventory, setInventory] = useState([]);
   const [currentInvoice, setCurrentInvoice] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchInventory();
-  }, []);
+  // useEffect(() => {
+  //   fetchInventory();
+  //   fetchSalesHistory();
+  // }, []);
 
   const fetchInventory = async () => {
+    logger.debug("Starting inventory fetch");
     try {
+      setLoading(true);
+      logger.debug("Fetching products from database");
       const products = await getProducts();
+      logger.debug(`Retrieved ${products.length} products`);
       setInventory(products);
+      logger.info("Inventory fetched successfully");
     } catch (error) {
-      console.error("Error fetching inventory:", error);
+      setError(error.message);
+      logger.error(`Error fetching inventory: ${error.message}`);
+    } finally {
+      setLoading(false);
+      logger.debug("Completed inventory fetch");
     }
   };
 
-  const addToInventory = (product) => {
-    setInventory((prev) => [...prev, product]);
+  const fetchSalesHistory = async () => {
+    try {
+      const orders = await getOrders();
+      setSalesHistory(orders);
+      logger.info("Sales history fetched successfully");
+    } catch (error) {
+      logger.error(`Error fetching sales history: ${error.message}`);
+    }
   };
 
-  const updateInventoryItem = (updatedProduct) => {
-    setInventory((prev) =>
-      prev.map((item) =>
-        item.id === updatedProduct.id ? updatedProduct : item
-      )
-    );
+  const addToInventory = async (product) => {
+    logger.debug(`Adding product to inventory: ${JSON.stringify(product)}`);
+    try {
+      const newProduct = await addProduct({
+        ...product,
+        partitionKey: "product",
+        createdBy: "user",
+      });
+      logger.debug(`Product created with ID: ${newProduct.id}`);
+      setInventory((prev) => [...prev, newProduct]);
+      logger.info(`Product added successfully: ${newProduct.id}`);
+      return newProduct;
+    } catch (error) {
+      logger.error(`Error adding product: ${error.message}`);
+      throw error;
+    }
   };
 
-  const removeFromInventory = (productId) => {
-    setInventory((prev) => prev.filter((item) => item.id !== productId));
+  const updateInventoryItem = async (updatedProduct) => {
+    try {
+      const result = await updateProduct(updatedProduct.id, {
+        ...updatedProduct,
+        updatedBy: "user", // Replace with actual user ID when auth is implemented
+      });
+      setInventory((prev) =>
+        prev.map((item) => (item.id === result.id ? result : item))
+      );
+      logger.info(`Product updated successfully: ${result.id}`);
+      return result;
+    } catch (error) {
+      logger.error(`Error updating product: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const removeFromInventory = async (productId) => {
+    try {
+      await deleteProduct(productId);
+      setInventory((prev) => prev.filter((item) => item.id !== productId));
+      logger.info(`Product deleted successfully: ${productId}`);
+    } catch (error) {
+      logger.error(`Error deleting product: ${error.message}`);
+      throw error;
+    }
   };
 
   const addToInvoice = (product) => {
@@ -59,33 +116,61 @@ export const InventoryProvider = ({ children }) => {
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
-      } else {
-        return [...prev, { ...product, quantity: 1 }];
       }
+      return [...prev, { ...product, quantity: 1 }];
     });
+    logger.info(`Product added to invoice: ${product.id}`);
   };
 
   const removeFromInvoice = (productId) => {
     setCurrentInvoice((prev) => prev.filter((item) => item.id !== productId));
+    logger.info(`Product removed from invoice: ${productId}`);
   };
 
   const clearInvoice = () => {
     setCurrentInvoice([]);
+    logger.info("Invoice cleared");
   };
 
-  const addToSalesHistory = (invoice) => {
-    setSalesHistory((prev) => [...prev, invoice]);
+  const addToSalesHistory = async (invoice) => {
+    try {
+      const order = await addOrder({
+        products: invoice.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          totalPrice: item.price * item.quantity,
+        })),
+        totalAmount: invoice.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0
+        ),
+        totalQuantity: invoice.reduce(
+          (total, item) => total + item.quantity,
+          0
+        ),
+        orderStatus: "completed",
+        paymentStatus: "completed",
+        paymentMethod: "cash",
+        createdBy: "user", // Replace with actual user ID when auth is implemented
+      });
+      setSalesHistory((prev) => [...prev, order]);
+      logger.info(`Order added to sales history: ${order.id}`);
+      return order;
+    } catch (error) {
+      logger.error(`Error adding order to sales history: ${error.message}`);
+      throw error;
+    }
   };
 
   return (
     <InventoryContext.Provider
       value={{
         inventory,
-        setInventory,
         currentInvoice,
-        setCurrentInvoice,
         salesHistory,
-        setSalesHistory,
+        loading,
+        error,
         addToInventory,
         updateInventoryItem,
         removeFromInventory,
@@ -93,6 +178,7 @@ export const InventoryProvider = ({ children }) => {
         removeFromInvoice,
         clearInvoice,
         addToSalesHistory,
+        refreshInventory: fetchInventory,
       }}
     >
       {children}
