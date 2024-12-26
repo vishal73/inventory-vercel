@@ -1,15 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import {
-  getProducts,
-  addProduct,
-  updateProduct,
-  deleteProduct,
-  addOrder,
-  getOrders,
-} from "./database";
-import Logger from "./Logger";
-
-const logger = Logger;
+import api from "./services/api";
+import logger from "./Logger";
 
 const InventoryContext = createContext();
 
@@ -28,22 +19,22 @@ export const InventoryProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // useEffect(() => {
-  //   fetchInventory();
-  //   fetchSalesHistory();
-  // }, []);
+  useEffect(() => {
+    fetchInventory();
+    fetchSalesHistory();
+  }, []);
 
   const fetchInventory = async () => {
     logger.debug("Starting inventory fetch");
     try {
       setLoading(true);
-      logger.debug("Fetching products from database");
-      const products = await getProducts();
+      logger.debug("Fetching products from API");
+      const products = await api.get("/products");
       logger.debug(`Retrieved ${products.length} products`);
       setInventory(products);
       logger.info("Inventory fetched successfully");
     } catch (error) {
-      setError(error.message);
+      setError(error.response?.data?.error || error.message);
       logger.error(`Error fetching inventory: ${error.message}`);
     } finally {
       setLoading(false);
@@ -53,7 +44,7 @@ export const InventoryProvider = ({ children }) => {
 
   const fetchSalesHistory = async () => {
     try {
-      const orders = await getOrders();
+      const orders = await api.get("/invoices");
       setSalesHistory(orders);
       logger.info("Sales history fetched successfully");
     } catch (error) {
@@ -64,12 +55,10 @@ export const InventoryProvider = ({ children }) => {
   const addToInventory = async (product) => {
     logger.debug(`Adding product to inventory: ${JSON.stringify(product)}`);
     try {
-      const newProduct = await addProduct({
+      const newProduct = await api.post("/products", {
         ...product,
-        partitionKey: "product",
-        createdBy: "user",
+        createdBy: "user", // Replace with actual user ID when auth is implemented
       });
-      logger.debug(`Product created with ID: ${newProduct.id}`);
       setInventory((prev) => [...prev, newProduct]);
       logger.info(`Product added successfully: ${newProduct.id}`);
       return newProduct;
@@ -81,7 +70,7 @@ export const InventoryProvider = ({ children }) => {
 
   const updateInventoryItem = async (updatedProduct) => {
     try {
-      const result = await updateProduct(updatedProduct.id, {
+      const result = await api.put(`/products/${updatedProduct.id}`, {
         ...updatedProduct,
         updatedBy: "user", // Replace with actual user ID when auth is implemented
       });
@@ -98,7 +87,7 @@ export const InventoryProvider = ({ children }) => {
 
   const removeFromInventory = async (productId) => {
     try {
-      await deleteProduct(productId);
+      await api.delete(`/products/${productId}`);
       setInventory((prev) => prev.filter((item) => item.id !== productId));
       logger.info(`Product deleted successfully: ${productId}`);
     } catch (error) {
@@ -134,7 +123,7 @@ export const InventoryProvider = ({ children }) => {
 
   const addToSalesHistory = async (invoice) => {
     try {
-      const order = await addOrder({
+      const order = await api.post("/invoices", {
         products: invoice.map((item) => ({
           productId: item.id,
           quantity: item.quantity,

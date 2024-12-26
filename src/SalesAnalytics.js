@@ -12,10 +12,9 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { getInvoicesByDateRange } from "./database";
+import api from "./services/api";
 import Logger from "./Logger";
 
-const logger = Logger;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 const SalesAnalytics = () => {
@@ -37,94 +36,75 @@ const SalesAnalytics = () => {
 
   const fetchSalesData = async () => {
     try {
-      logger.debug("Starting sales data fetch");
+      Logger.debug("Starting sales data fetch");
       setLoading(true);
 
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
 
-      logger.debug(`Fetching invoices from ${startDate} to ${endDate}`);
-      const invoices = await getInvoicesByDateRange(
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
+      Logger.debug(`Fetching analytics from ${startDate} to ${endDate}`);
 
-      logger.debug(`Retrieved ${invoices.length} invoices`);
-      const analyticsData = calculateAnalytics(invoices);
-      setAnalytics(analyticsData);
-      logger.info("Sales analytics data fetched successfully");
+      // Fetch aggregated analytics data
+      const analyticsData = await api.get("/analytics/aggregate", {
+        params: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          metrics: "sales,orders,categories,products,payments",
+          groupBy: "day",
+        },
+      });
+
+      // Transform API response to component state format
+      const transformedData = transformAnalyticsData(analyticsData);
+      setAnalytics(transformedData);
+
+      Logger.info("Sales analytics data fetched successfully", {
+        period: "30d",
+        metrics: Object.keys(transformedData),
+      });
     } catch (error) {
-      setError("Failed to fetch sales data");
-      logger.error(`Error fetching sales analytics: ${error.message}`);
+      const errorMessage = "Failed to fetch sales data";
+      setError(errorMessage);
+      Logger.error(`Error fetching sales analytics: ${error.message}`, {
+        error,
+        period: "30d",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateAnalytics = (invoices) => {
-    logger.debug("Starting analytics calculations");
-
-    // Calculate total sales and orders
-    const totalSales = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-    const totalOrders = invoices.length;
-    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-    logger.debug(
-      `Calculated totals: Sales=${totalSales}, Orders=${totalOrders}, Avg=${averageOrderValue}`
-    );
-
-    // Calculate daily sales
-    const dailySales = invoices.reduce((acc, inv) => {
-      const date = new Date(inv.date).toLocaleDateString();
-      acc[date] = (acc[date] || 0) + inv.totalAmount;
-      return acc;
-    }, {});
-
-    // Calculate top products
-    const productSales = invoices.reduce((acc, inv) => {
-      inv.products.forEach((prod) => {
-        acc[prod.name] = (acc[prod.name] || 0) + prod.quantity;
-      });
-      return acc;
-    }, {});
-
-    // Calculate payment method distribution
-    const paymentMethods = invoices.reduce((acc, inv) => {
-      acc[inv.paymentMethod] = (acc[inv.paymentMethod] || 0) + 1;
-      return acc;
-    }, {});
-
-    // Calculate category distribution
-    const categoryDistribution = invoices.reduce((acc, inv) => {
-      inv.products.forEach((prod) => {
-        acc[prod.category] = (acc[prod.category] || 0) + prod.totalPrice;
-      });
-      return acc;
-    }, {});
+  const transformAnalyticsData = (apiData) => {
+    Logger.debug("Transforming analytics data", {
+      dataPoints: Object.keys(apiData).length,
+    });
 
     return {
-      totalSales,
-      totalOrders,
-      averageOrderValue,
-      dailySales: Object.entries(dailySales).map(([date, amount]) => ({
-        date,
-        amount,
-      })),
-      topProducts: Object.entries(productSales)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([name, quantity]) => ({ name, quantity })),
-      paymentMethods: Object.entries(paymentMethods).map(([name, value]) => ({
-        name,
-        value,
-      })),
-      categoryDistribution: Object.entries(categoryDistribution).map(
-        ([name, value]) => ({
-          name,
-          value,
-        })
-      ),
+      totalSales: apiData.totalSales || 0,
+      totalOrders: apiData.totalOrders || 0,
+      averageOrderValue:
+        apiData.totalOrders > 0 ? apiData.totalSales / apiData.totalOrders : 0,
+      dailySales:
+        apiData.dailySales?.map((day) => ({
+          date: new Date(day.date).toLocaleDateString(),
+          amount: day.sales,
+        })) || [],
+      topProducts:
+        apiData.topProducts?.map((product) => ({
+          name: product.name,
+          quantity: product.quantity,
+        })) || [],
+      paymentMethods:
+        apiData.paymentMethods?.map((method) => ({
+          name: method.name,
+          value: method.count,
+        })) || [],
+      categoryDistribution:
+        apiData.categoryDistribution?.map((category) => ({
+          name: category.name,
+          value: category.sales,
+        })) || [],
     };
   };
 

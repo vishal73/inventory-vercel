@@ -3,14 +3,20 @@ import { v4 as uuidv4 } from "uuid";
 import { useInventory } from "./InventoryContext";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
-import { Html5Qrcode } from "html5-qrcode";
 import { useTheme } from "./ThemeContext";
 import { saveInvoiceToDatabase, printInvoice } from "./InvoiceUtils";
-import { PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
+import { PlusCircle, MinusCircle, X, Loader2, Upload } from "lucide-react";
 import { Alert, AlertDescription } from "./components/ui/alert";
 import Logger from "./Logger";
+import { BrowserQRCodeReader } from "@zxing/browser";
 
 const logger = Logger;
+
+const isScanningSupported = () => {
+  return true
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+};
+
 const InvoiceGenerator = ({ isActive }) => {
   const {
     inventory,
@@ -38,15 +44,28 @@ const InvoiceGenerator = ({ isActive }) => {
   const [formErrors, setFormErrors] = useState({});
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
+  const [isScannerSupported, setIsScannerSupported] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
 
-  const handleScan = (data) => {
+  useEffect(() => {
+    // Check browser support on mount
+    setIsScannerSupported(isScanningSupported());
+  }, []);
+
+  const handleScan = async (data) => {
     if (data) {
       setScannedProduct(data);
-      addProductToInvoice(data);
-      setTimeout(() => {
-        scannerRef.current.pause();
-      }, 1000);
-      scannerRef.current.resume();
+      await addProductToInvoice(data);
+
+      // Pause scanning briefly after successful scan
+      if (isScanning) {
+        setIsScanning(false);
+        setTimeout(() => {
+          setIsScanning(true);
+        }, 1000);
+      }
     }
   };
 
@@ -67,7 +86,7 @@ const InvoiceGenerator = ({ isActive }) => {
   };
 
   useEffect(() => {
-    if (isActive) {
+    if (isActive && isScannerSupported) {
       logger.debug("Invoice tab is active, starting scanner");
       startScanning();
     } else {
@@ -78,50 +97,93 @@ const InvoiceGenerator = ({ isActive }) => {
     return () => {
       stopScanning();
     };
-  }, [isActive]);
+  }, [isActive, isScannerSupported]);
 
-  const stopScanning = () => {
-    if (scannerRef.current) {
+  const stopScanning = async () => {
+    if (scannerRef.current && isScanning) {
       logger.debug("Stopping QR scanner");
-      scannerRef.current
-        .stop()
-        .then(() => {
-          logger.debug("QR scanner stopped successfully");
-        })
-        .catch((err) => {
-          logger.error(`Error stopping QR scanner: ${err.message}`);
-        });
+      try {
+        await scannerRef.current.stop();
+        setIsScanning(false);
+        logger.debug("QR scanner stopped successfully");
+      } catch (err) {
+        logger.error(`Error stopping QR scanner: ${err.message}`);
+      }
       scannerRef.current = null;
     }
   };
 
-  const startScanning = () => {
-    logger.debug("Initializing QR scanner");
-    const scanner = new Html5Qrcode("qr-reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+  const startScanning = async () => {
+    try {
+      const codeReader = new BrowserQRCodeReader();
 
-    scanner
-      .start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          handleScan(decodedText);
-          setError(null);
-          logger.debug(`Successfully scanned code: ${decodedText}`);
-        },
-        (err) => {
-          setError(err);
-          // logger.error(`Scanner error: ${err.message}`);
+      // Try to get available video devices
+      const videoInputDevices =
+        await BrowserQRCodeReader.listVideoInputDevices();
+
+      if (videoInputDevices.length === 0) {
+        setError("No camera found");
+        return;
+      }
+
+      // Use the first available camera
+      const selectedDeviceId = videoInputDevices[0].deviceId;
+
+      // Start continuous scanning
+      const controls = await codeReader.decodeFromVideoDevice(
+        selectedDeviceId,
+        videoRef.current,
+        (result, error) => {
+          if (result) {
+            handleScan(result.text);
+          }
+          if (error && error?.message?.includes("NotFound")) {
+            // Ignore "NotFound" errors as they're expected during scanning
+            return;
+          }
         }
-      )
-      .then(() => {
-        scannerRef.current = scanner;
-        logger.debug("QR scanner started successfully");
-      })
-      .catch((err) => {
-        setError(err);
-        logger.error(`Unable to start scanning: ${err.message}`);
-      });
+      );
+
+      setIsScanning(true);
+
+      // Store controls for cleanup
+      return () => {
+        controls.stop();
+        setIsScanning(false);
+      };
+    } catch (error) {
+      logger.error("Error starting scanner:", error);
+      setError("Could not start scanner. Please use file upload instead.");
+    }
+  };
+
+  // Handle file upload for QR code scanning
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const codeReader = new BrowserQRCodeReader();
+      const img = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const result = await codeReader.decodeFromImageElement(canvas);
+      if (result) {
+        handleScan(result.text);
+      }
+    } catch (error) {
+      logger.error("Error reading QR code from file:", error);
+      setError(
+        "Could not read QR code from image. Please try another image or enter code manually."
+      );
+    }
+
+    // Reset file input
+    event.target.value = "";
   };
 
   const handleQuantityChange = (id, change) => {
@@ -306,6 +368,53 @@ const InvoiceGenerator = ({ isActive }) => {
     >
       <h2 className="text-2xl font-bold mb-4">Generate Invoice</h2>
 
+      {/* Scanner Support Warning */}
+      {!isScannerSupported && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+          <AlertDescription>
+            QR scanning is not supported in this browser. Please use the manual
+            input option.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Scanner Section */}
+      <div className="mb-4">
+        {/* Video element for QR scanning */}
+        <video
+          ref={videoRef}
+          className="w-full max-w-[500px] mb-4"
+          hidden={!isScanning}
+        />
+
+        {/* Scanner Controls */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            onClick={() =>
+              isScanning ? setIsScanning(false) : startScanning()
+            }
+          >
+            {isScanning ? "Stop Scanner" : "Start Scanner"}
+          </Button>
+
+          {/* File Upload Button */}
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload QR Code
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+        </div>
+      </div>
+
       {/* Success and Error Messages */}
       {success && (
         <Alert className="mb-4 bg-green-50 border-green-200">
@@ -318,6 +427,17 @@ const InvoiceGenerator = ({ isActive }) => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Manual Input Section */}
+      <div className="mb-4 flex gap-2">
+        <Input
+          type="text"
+          placeholder="Enter Product ID manually"
+          value={manualProductId}
+          onChange={(e) => setManualProductId(e.target.value)}
+        />
+        <Button onClick={handleManualAdd}>Add</Button>
+      </div>
 
       {/* Buyer Details Form */}
       <div className="mb-4 grid gap-4">
@@ -383,22 +503,6 @@ const InvoiceGenerator = ({ isActive }) => {
           <option value="card">Card</option>
           <option value="upi">UPI</option>
         </select> */}
-      </div>
-
-      {/* Scanner and Product List */}
-      <div id="qr-reader" className="w-full aspect-[4/3] mb-4" />
-      <p className="mb-2">Scanned Product: {scannedProduct}</p>
-
-      {/* Manual Product Entry */}
-      <div className="flex mb-4">
-        <Input
-          type="text"
-          value={manualProductId}
-          onChange={(e) => setManualProductId(e.target.value)}
-          placeholder="Enter Product ID"
-          className="mr-2"
-        />
-        <Button onClick={handleManualAdd}>Add</Button>
       </div>
 
       {/* Current Invoice Items */}
