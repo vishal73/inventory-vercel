@@ -19,8 +19,8 @@ product:
     quantity: number # in pcs
     price: number # in rupees
     discount: number # in percentage
-  tags:
-    - string # officewear, casualwear, etc
+    tags:
+      - string # officewear, casualwear, etc
   sellerId: string
   createdAt: date
   updatedAt: date

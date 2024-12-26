@@ -13,11 +13,11 @@ import { BrowserQRCodeReader } from "@zxing/browser";
 const logger = Logger;
 
 const isScanningSupported = () => {
-  return true
+  return true;
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 };
 
-const InvoiceGenerator = ({ isActive }) => {
+const InvoiceGenerator = ({ isActive, savedState, onStateChange }) => {
   const {
     inventory,
     currentInvoice,
@@ -48,6 +48,72 @@ const InvoiceGenerator = ({ isActive }) => {
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
+
+  // Define default state
+  const defaultState = {
+    invoice: {
+      customerName: "",
+      customerAddress: "",
+      customerPhone: "",
+      customerEmail: "",
+      items: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      date: new Date().toISOString().split("T")[0],
+      invoiceNumber: generateInvoiceNumber(), // You'll need to implement this
+      notes: "",
+    },
+    selectedProducts: [],
+    formRef: React.createRef(),
+  };
+
+  // Initialize state with savedState or default values
+  const [invoiceState, setInvoiceState] = useState(() => ({
+    ...defaultState,
+    ...(savedState || {}),
+  }));
+
+  // Use useRef to track if this is the initial mount
+  const isInitialMount = useRef(true);
+
+  // Update parent only when invoiceState changes and not on initial mount
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (isActive) {
+      // Debounce the state update to prevent rapid changes
+      const timeoutId = setTimeout(() => {
+        // Clean the state before sending it to parent
+        const cleanState = { ...invoiceState };
+        delete cleanState.formRef; // Remove non-serializable data
+        onStateChange(cleanState);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [invoiceState, isActive, onStateChange]);
+
+  // Initialize form state from savedState only once on mount
+  useEffect(() => {
+    if (savedState && isInitialMount.current) {
+      setInvoiceState((prev) => ({
+        ...prev,
+        ...savedState,
+        formRef: React.createRef(), // Rehydrate the ref
+      }));
+    }
+  }, []); // Empty dependency array for mount-only effect
+
+  const handleFormChange = (updates) => {
+    setInvoiceState((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  };
 
   useEffect(() => {
     // Check browser support on mount
@@ -601,6 +667,11 @@ const InvoiceGenerator = ({ isActive }) => {
       </div>
     </div>
   );
+};
+
+// Helper function to generate invoice number (implement as needed)
+const generateInvoiceNumber = () => {
+  return `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 };
 
 export default InvoiceGenerator;

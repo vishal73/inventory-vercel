@@ -1,16 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import {
-  Camera,
-  List,
-  FileText,
-  PlusCircle,
-  BarChart2,
-  Sun,
-  Moon,
-} from "lucide-react";
+import { List, FileText, PlusCircle, BarChart2, Sun, Moon } from "lucide-react";
 import { InventoryProvider } from "./InventoryContext";
-// import ProductScanner from "./ProductScanner";
 import ProductList from "./ProductList";
 import InvoiceGenerator from "./InvoiceGenerator";
 import ProductCreator from "./ProductCreator";
@@ -18,79 +9,188 @@ import SalesAnalytics from "./SalesAnalytics";
 import { useTheme } from "./ThemeContext";
 import Logger from "./Logger";
 import { skaiLogo } from "./assets/skaiLogo";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-const logger = Logger;
+// Define tab configurations
+const TAB_CONFIG = {
+  inventory: {
+    icon: List,
+    component: ProductList,
+    title: "Inventory",
+    path: "/inventory",
+  },
+  invoice: {
+    icon: FileText,
+    component: InvoiceGenerator,
+    title: "Invoice",
+    path: "/invoice",
+  },
+  create: {
+    icon: PlusCircle,
+    component: ProductCreator,
+    title: "Create Product",
+    path: "/create",
+  },
+  analytics: {
+    icon: BarChart2,
+    component: SalesAnalytics,
+    title: "Analytics",
+    path: "/analytics",
+  },
+};
+
+// Add this helper function to clean circular references
+const cleanDataForStorage = (data) => {
+  const cleaned = { ...data };
+
+  // Clean each tab's state
+  Object.keys(cleaned).forEach((tabKey) => {
+    if (cleaned[tabKey]) {
+      // Remove React refs and DOM elements
+      const cleanedTabState = { ...cleaned[tabKey] };
+      // Clean refs from both ProductCreator and InvoiceGenerator
+      if (cleanedTabState.fileInputRef) delete cleanedTabState.fileInputRef;
+      if (cleanedTabState.formRef) delete cleanedTabState.formRef;
+      cleaned[tabKey] = cleanedTabState;
+    }
+  });
+
+  return cleaned;
+};
 
 const App = () => {
   const { isDarkMode, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState("invoice");
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    logger.debug(`Theme mode changed: ${isDarkMode ? "dark" : "light"}`);
-  }, [isDarkMode]);
+  // Find active tab based on current path
+  const activeTab =
+    Object.keys(TAB_CONFIG).find(
+      (key) => TAB_CONFIG[key].path === location.pathname
+    ) || "inventory";
 
+  // State for tab data persistence
+  const [tabState, setTabState] = useState({
+    inventory: {},
+    invoice: {},
+    create: {},
+    analytics: {},
+  });
+
+  // Handle tab change
   const handleTabChange = (value) => {
-    logger.debug(`Tab changed to: ${value}`);
-    setActiveTab(value);
+    Logger.debug(`Tab changed to: ${value}`);
+    navigate(TAB_CONFIG[value].path);
   };
 
+  // Update tab state with memoized callback
+  const updateTabState = useCallback((tab, data) => {
+    setTabState((prev) => ({
+      ...prev,
+      [tab]: { ...prev[tab], ...data },
+    }));
+  }, []); // Empty dependency array since this function doesn't depend on any props or state
+
+  // Save tab state to localStorage when it changes
+  useEffect(() => {
+    try {
+      const cleanedState = cleanDataForStorage(tabState);
+      localStorage.setItem("tabState", JSON.stringify(cleanedState));
+    } catch (error) {
+      Logger.error("Error saving tab state:", error);
+    }
+  }, [tabState]);
+
+  // Load tab state from localStorage
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem("tabState");
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        // Rehydrate any necessary refs when loading the state
+        Object.keys(parsedState).forEach((tabKey) => {
+          if (parsedState[tabKey]) {
+            parsedState[tabKey].fileInputRef = React.createRef();
+          }
+        });
+        setTabState(parsedState);
+      }
+    } catch (error) {
+      Logger.error("Error loading tab state:", error);
+    }
+  }, []); // Empty dependency array for mount-only effect
+
   return (
-    <InventoryProvider>
-      <div
-        className={`relative max-w-xl mx-auto p-5 ${
-          isDarkMode ? "bg-gray-800 text-white" : "bg-white"
-        } shadow-md rounded-lg`}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <img src={skaiLogo} alt="SKAI Accessories" className="h-12 w-auto" />
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-            aria-label="Toggle theme"
-          >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-        </div>
-        <Tabs defaultValue="inventory" onValueChange={handleTabChange}>
-          <TabsList className="grid grid-cols-4 gap-2 mb-4">
-            {[
-              // { value: "scan", icon: Camera },
-              { value: "inventory", icon: List },
-              { value: "invoice", icon: FileText },
-              { value: "create", icon: PlusCircle },
-              { value: "analytics", icon: BarChart2 },
-            ].map(({ value, icon: Icon }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className={({ selected }) =>
-                  `flex justify-center items-center p-2 border rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 ${
-                    selected ? (isDarkMode ? "bg-gray-700" : "bg-gray-300") : ""
-                  }`
-                }
-              >
-                <Icon size={20} />
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {/* <TabsContent value="scan">
-            <ProductScanner />
-          </TabsContent> */}
-          <TabsContent value="inventory">
-            <ProductList />
-          </TabsContent>
-          <TabsContent value="invoice">
-            <InvoiceGenerator isActive={activeTab === "invoice"} />
-          </TabsContent>
-          <TabsContent value="create">
-            <ProductCreator />
-          </TabsContent>
-          <TabsContent value="analytics">
-            <SalesAnalytics />
-          </TabsContent>
-        </Tabs>
+    <div
+      className={`relative max-w-xl mx-auto p-5 ${
+        isDarkMode ? "bg-gray-800 text-white" : "bg-white"
+      } shadow-md rounded-lg`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <img src={skaiLogo} alt="SKAI Accessories" className="h-12 w-auto" />
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+          aria-label="Toggle theme"
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
       </div>
-    </InventoryProvider>
+
+      <InventoryProvider>
+        <div>
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {Object.entries(TAB_CONFIG).map(
+              ([value, { icon: Icon, title }]) => (
+                <button
+                  key={value}
+                  onClick={() => handleTabChange(value)}
+                  className={`
+                  flex justify-center items-center p-2 border rounded-md
+                  transition-colors duration-200
+                  ${
+                    activeTab === value
+                      ? isDarkMode
+                        ? "bg-gray-700 text-white"
+                        : "bg-gray-200 text-gray-800"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }
+                `}
+                  title={title}
+                >
+                  <Icon size={20} />
+                </button>
+              )
+            )}
+          </div>
+
+          <Routes>
+            {Object.entries(TAB_CONFIG).map(
+              ([value, { component: Component, path }]) => (
+                <Route
+                  key={value}
+                  path={path}
+                  element={
+                    <Component
+                      isActive={activeTab === value}
+                      savedState={tabState[value]}
+                      onStateChange={(data) => updateTabState(value, data)}
+                    />
+                  }
+                />
+              )
+            )}
+            <Route path="/" element={<Navigate to="/inventory" replace />} />
+          </Routes>
+        </div>
+      </InventoryProvider>
+    </div>
   );
 };
 
